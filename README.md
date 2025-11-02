@@ -10,7 +10,7 @@ Simple Spring Boot application that manages customer accounts and transactions.
 - Spring Data JPA (H2 in-memory database)
 - SpringDoc OpenAPI (Swagger)
 - JUnit 5, Mockito, AssertJ
-- Maven
+- Mavenclear
 - Docker
 
 
@@ -36,8 +36,8 @@ java -jar target/financial_system-1.0-SNAPSHOT.jar
 API will be available at `http://localhost:8080/api/v1`.
 
 
-Swagger UI: `http://localhost:8080/swagger-ui.html`
-API docs: `http://localhost:8080/api-docs`
+Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+API docs: `http://localhost:8080/v3/api-docs`
 
 
 ## Run tests

@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -47,35 +48,86 @@ public class TransactionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.transactionId").value(1))
+                .andExpect(jsonPath("$.transaction_id").value(1))
                 .andExpect(jsonPath("$.amount").value(100.0));
     }
 
     @Test
     void createTransaction_invalidAccount_shouldReturnBadRequest() throws Exception {
         when(transactionService.createTransaction(anyLong(), anyLong(), anyDouble()))
-                .thenThrow(new IllegalArgumentException("Invalid account ID"));
+                .thenThrow(new NoSuchElementException("Invalid account ID"));
 
         TransactionRequest req = new TransactionRequest(99L, 1L, 50.0);
 
         mockMvc.perform(post("/api/v1/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Invalid account ID"));
     }
 
     @Test
     void createTransaction_invalidOperationType_shouldReturnBadRequest() throws Exception {
         when(transactionService.createTransaction(anyLong(), anyLong(), anyDouble()))
-                .thenThrow(new IllegalArgumentException("Invalid operation type ID"));
+                .thenThrow(new NoSuchElementException("Invalid operation type ID"));
 
         TransactionRequest req = new TransactionRequest(99L, 1L, 50.0);
 
         mockMvc.perform(post("/api/v1/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Invalid operation type ID"));
+    }
+
+    @Test
+    void createTransaction_whenAccountIdMissing_shouldReturnBadRequest() throws Exception {
+        // Missing account_id
+        String requestJson = """
+        {
+          "operationTypeId": 4,
+          "amount": 100.0
+        }
+        """;
+
+        mockMvc.perform(post("/api/v1/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.accountId").value("Account Id is required"));
+    }
+
+    @Test
+    void createTransaction_whenOperationTypeMissing_shouldReturnBadRequest() throws Exception {
+        // Missing operation_type_id
+        String requestJson = """
+        {
+          "accountId": 1,
+          "amount": 100.0
+        }
+        """;
+
+        mockMvc.perform(post("/api/v1/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.operationTypeId").value("Operation type is required"));
+    }
+
+    @Test
+    void createTransaction_whenAmountMissing_shouldReturnBadRequest() throws Exception {
+        // Missing amount
+        String requestJson = """
+        {
+          "accountId": 1,
+          "operationTypeId": 4
+        }
+        """;
+
+        mockMvc.perform(post("/api/v1/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.amount").value("Amount is required"));
     }
 }

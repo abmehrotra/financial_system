@@ -11,6 +11,8 @@ spring:
   h2:
     console:
       enabled: true
+  jackson:
+    property-naming-strategy: SNAKE_CASE
 logging:
   level:
     org.hibernate.SQL: debug

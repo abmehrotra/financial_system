@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -27,11 +28,11 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public Transaction createTransaction(Long accountId, Long operationTypeId, Double amount) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid account ID"));
+                .orElseThrow(() -> new NoSuchElementException("Invalid account ID"));
 
 
         OperationType operationType = operationTypeRepository.findById(operationTypeId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid operation type ID"));
+                .orElseThrow(() -> new NoSuchElementException("Invalid operation type ID"));
 
 
         double signedAmount = operationType.getDescription().equalsIgnoreCase("PAYMENT") ? Math.abs(amount) : -Math.abs(amount);

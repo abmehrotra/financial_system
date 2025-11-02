@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,7 +88,7 @@ public class TransactionServiceImplTest {
         when(accountRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> transactionService.createTransaction(99L, 1L, 100.0))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(NoSuchElementException.class)
                 .hasMessageContaining("Invalid account ID");
     }
 
@@ -98,7 +99,7 @@ public class TransactionServiceImplTest {
         when(operationTypeRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> transactionService.createTransaction(1L, 99L, 100.0))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(NoSuchElementException.class)
                 .hasMessageContaining("Invalid operation type ID");
     }
 }

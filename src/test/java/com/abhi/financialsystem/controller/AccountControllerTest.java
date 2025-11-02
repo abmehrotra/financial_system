@@ -1,6 +1,7 @@
 package com.abhi.financialsystem.controller;
 
 import com.abhi.financialsystem.dto.AccountRequest;
+import com.abhi.financialsystem.exception.ResourceConflictException;
 import com.abhi.financialsystem.model.Account;
 import com.abhi.financialsystem.service.AccountService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,21 +39,21 @@ public class AccountControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountId").value(1))
-                .andExpect(jsonPath("$.documentNumber").value("12345678900"));
+                .andExpect(jsonPath("$.account_id").value(1))
+                .andExpect(jsonPath("$.document_number").value("12345678900"));
     }
 
     @Test
     void createAccount_whenAlreadyExists_shouldReturnBadRequest() throws Exception {
         when(accountService.createAccount(anyString()))
-                .thenThrow(new IllegalArgumentException("Account with this document number already exists"));
+                .thenThrow(new ResourceConflictException("Account with this document number already exists"));
 
         AccountRequest req = new AccountRequest("12345678900");
 
         mockMvc.perform(post("/api/v1/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("Account with this document number already exists"));
     }
 
@@ -65,11 +66,10 @@ public class AccountControllerTest {
 
         when(accountService.getAccount(99L)).thenReturn(account);
 
-        mockMvc.perform(get("/api/v1/accounts")
-                        .param("accountId", "99"))
+        mockMvc.perform(get("/api/v1/accounts/99"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountId").value(99))
-                .andExpect(jsonPath("$.documentNumber").value("12345678900"));
+                .andExpect(jsonPath("$.account_id").value(99))
+                .andExpect(jsonPath("$.document_number").value("12345678900"));
     }
 
     @Test
@@ -77,9 +77,56 @@ public class AccountControllerTest {
         when(accountService.getAccount(99L))
                 .thenThrow(new IllegalArgumentException("Account not found"));
 
-        mockMvc.perform(get("/api/v1/accounts")
-                        .param("accountId", "99"))
+        mockMvc.perform(get("/api/v1/accounts/99"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Account not found"));
+    }
+
+    @Test
+    void createAccount_whenDocumentNumberMissing_shouldReturnBadRequest() throws Exception {
+        // Missing document_number field entirely
+        String requestJson = "{}";
+
+        mockMvc.perform(post("/api/v1/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.documentNumber").value("Document number is required"));
+    }
+
+    @Test
+    void createAccount_whenDocumentNumberBlank_shouldReturnBadRequest() throws Exception {
+        // Blank document number
+        String requestJson = """
+        { "documentNumber": "" }
+        """;
+
+        mockMvc.perform(post("/api/v1/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.documentNumber").value("Document number is required"));
+    }
+
+    @Test
+    void getAccount_whenAccountIdIsNonNumeric_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/accounts/abc")) // invalid param
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createAccount_whenDocumentNumberIsNotNumeric_shouldReturnBadRequest() throws Exception {
+        // Non-numeric document number
+        String requestJson = """
+    {
+      "document_number": "abc"
+    }
+    """;
+
+        mockMvc.perform(post("/api/v1/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.documentNumber").value("Document number must be numeric"));
     }
 }

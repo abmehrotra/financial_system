@@ -1,5 +1,6 @@
 package com.abhi.financialsystem.service;
 
+import com.abhi.financialsystem.exception.ResourceConflictException;
 import com.abhi.financialsystem.model.Account;
 import com.abhi.financialsystem.repository.AccountRepository;
 import com.abhi.financialsystem.service.impl.AccountServiceImpl;
@@ -9,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +52,7 @@ public class AccountServiceImplTest {
         ));
 
         assertThatThrownBy(() -> accountService.createAccount("123"))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("Account with this document number already exists");
     }
 
@@ -71,7 +73,7 @@ public class AccountServiceImplTest {
         when(accountRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> accountService.getAccount(99L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(NoSuchElementException.class)
                 .hasMessageContaining("Account not found");
     }
 }
