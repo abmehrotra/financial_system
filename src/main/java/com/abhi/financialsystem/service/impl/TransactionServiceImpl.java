@@ -37,6 +37,18 @@ public class TransactionServiceImpl implements TransactionService {
 
         double signedAmount = operationType.getDescription().equalsIgnoreCase("PAYMENT") ? Math.abs(amount) : -Math.abs(amount);
 
+        // check for limit
+        double potentialBalance = 0;
+        if(signedAmount < 0 && signedAmount <= account.getLimit()) {
+            potentialBalance = account.getBalance() + signedAmount;
+            if(Math.abs(potentialBalance) > account.getLimit()) {
+                throw new IllegalArgumentException("Insufficient Limit");
+            }
+        }
+
+        //Update my account balance
+        account.setBalance(potentialBalance);
+        accountRepository.save(account);
 
         Transaction transaction = Transaction.builder()
                 .account(account)

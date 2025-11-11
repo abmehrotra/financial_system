@@ -3,6 +3,8 @@ package com.abhi.financialsystem.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -18,4 +20,11 @@ public class Account {
 
     @Column(name = "document_number", nullable = false, unique = true)
     private String documentNumber;
+
+    @Column
+    private double balance = 0.0;
+
+    @Column
+    private double limit = 1000.00;
+
 }

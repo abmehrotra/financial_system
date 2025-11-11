@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -36,9 +37,96 @@ public class TransactionServiceImplTest {
     @InjectMocks
     private TransactionServiceImpl transactionService;
 
+    private Account account;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        account = Account.builder()
+                .accountId(1L)
+                .documentNumber("1234")
+                .balance(0)
+                .limit(1000)
+                .build();
+    }
+
+    //PURCHASE (1) - $1001,00 -> NOK
+    //PURCHASE (1)  - $ 1000,00 -> OK
+    //PURCHASE (1)  - $ 1,00 -> NOK
+    //PAYMENT (4) - $ 1000,00 -> OK
+    //PURCHASE (1)  - $ 1,00 -> OK
+    //PURCHASE (1)  - $ 1000,00 -> NOK
+    //PURCHASE (1)  - $ 999,00 -> NOK
+    @Test
+    void purchaseWithinLimit_shouldBeAllowedAndDecreaseBalance() {
+        OperationType purchase = OperationType.builder().operationTypeId(1L).description("PURCHASE").build();
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(operationTypeRepository.findById(1L)).thenReturn(Optional.of(purchase));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
+
+        Transaction trnasc = transactionService.createTransaction(1L, 1L, 1000.00);
+
+        assertThat(trnasc.getAmount()).isEqualTo(-1000);
+        assertThat((account.getBalance())).isEqualTo(-1000);
+    }
+
+    @Test
+    void purchaseBeyondLimit_shouldRespectLimit(){
+        OperationType purchase = OperationType.builder().operationTypeId(1L).description("PURCHASE").build();
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(operationTypeRepository.findById(1L)).thenReturn(Optional.of(purchase));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
+
+        transactionService.createTransaction(1L, 1L, 1000.00);
+        assertThat(account.getBalance()).isEqualTo(-1000);
+
+        assertThatThrownBy(() -> transactionService.createTransaction(1L, 1L, 1.00))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Insufficient Limit");
+    }
+
+    @Test
+    void purchaseBeyondLimit_showThrowError(){
+        OperationType purchase = OperationType.builder().operationTypeId(1L).description("PURCHASE").build();
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(operationTypeRepository.findById(1L)).thenReturn(Optional.of(purchase));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertThatThrownBy(() -> transactionService.createTransaction(1L, 1L, 1001.00))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Insufficient Limit");
+    }
+
+    @Test
+    void multipleTransactions_shouldRespectLimit(){
+        OperationType purchase = OperationType.builder().operationTypeId(1L).description("PURCHASE").build();
+        OperationType payment = OperationType.builder().operationTypeId(4L).description("PAYMENT").build();
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(operationTypeRepository.findById(1L)).thenReturn(Optional.of(purchase));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
+
+        transactionService.createTransaction(1L, 1L, 1000.00);
+        assertThat(account.getBalance()).isEqualTo(-1000);
+
+        assertThatThrownBy(() -> transactionService.createTransaction(1L, 1L, 1.00))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Insufficient Limit");
+
+        when(operationTypeRepository.findById(4L)).thenReturn(Optional.of(payment));
+        transactionService.createTransaction(1L, 4L, 1000.00);
+        assertThat(account.getBalance()).isEqualTo(0);
+
+        transactionService.createTransaction(1L, 1L, 1.00);
+        assertThat(account.getBalance()).isEqualTo(-1); //-1
+
+
+        assertThatThrownBy(() -> transactionService.createTransaction(1L, 1L, 1000.00))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Insufficient Limit");
     }
 
     @Test
