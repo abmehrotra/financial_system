@@ -154,7 +154,7 @@ public class TransactionServiceImplTest {
             String description, double amount, double expectedAmount) {
 
         // Arrange
-        Account acc = Account.builder().accountId(1L).documentNumber("123").build();
+        Account acc = Account.builder().accountId(1L).documentNumber("123").balance(0).limit(1000).build();
         OperationType op = OperationType.builder().operationTypeId(1L).description(description).build();
 
         when(accountRepository.findById(1L)).thenReturn(Optional.of(acc));
